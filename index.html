@@ -1,0 +1,1501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Tracker">
+  <meta name="theme-color" content="#0b0b14">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='40' fill='%230b0b14'/%3E%3Crect x='40' y='110' width='16' height='42' rx='4' fill='%238b7cf8'/%3E%3Crect x='64' y='88' width='16' height='64' rx='4' fill='%238b7cf8'/%3E%3Crect x='88' y='68' width='16' height='84' rx='4' fill='%23c084fc'/%3E%3Crect x='112' y='78' width='16' height='74' rx='4' fill='%238b7cf8'/%3E%3Crect x='136' y='50' width='16' height='102' rx='4' fill='%23c084fc'/%3E%3C/svg%3E">
+  <title>Daily Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:        #0b0b14;
+      --bg2:       #111120;
+      --surface:   #16162a;
+      --card:      #1c1c30;
+      --card2:     #222238;
+      --border:    #2a2a44;
+      --border2:   #363658;
+      --accent:    #8b7cf8;
+      --accent-b:  #7060e8;
+      --accent-dim:rgba(139,124,248,0.14);
+      --accent-glo:rgba(139,124,248,0.28);
+      --morning:   #fb923c;
+      --morning-d: rgba(251,146,60,0.15);
+      --evening:   #38bdf8;
+      --evening-d: rgba(56,189,248,0.15);
+      --text:      #e2defc;
+      --text2:     #9490c0;
+      --text3:     #5a5678;
+      --green:     #4ade80;
+      --green-d:   rgba(74,222,128,0.15);
+      --red:       #f87171;
+      --safe-b:    env(safe-area-inset-bottom, 0px);
+      --safe-t:    env(safe-area-inset-top, 0px);
+      --nav-h:     64px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { height: 100%; background: var(--bg); }
+    body {
+      height: 100%;
+      font-family: 'Nunito', sans-serif;
+      font-size: 15px;
+      line-height: 1.5;
+      color: var(--text);
+      background: var(--bg);
+      -webkit-font-smoothing: antialiased;
+      -webkit-tap-highlight-color: transparent;
+      overscroll-behavior: none;
+    }
+
+    /* ── Layout ── */
+    #app {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      max-width: 480px;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    .view {
+      display: none;
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: calc(var(--nav-h) + var(--safe-b) + 16px);
+    }
+    .view.active { display: flex; flex-direction: column; }
+
+    /* ── Header ── */
+    .app-header {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      padding: calc(var(--safe-t) + 12px) 16px 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .header-left { flex: 1; min-width: 0; }
+    .app-title {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      color: var(--text);
+    }
+    .header-date-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 2px;
+    }
+    .header-date-label {
+      font-size: 13px;
+      color: var(--text2);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .date-picker-btn {
+      font-size: 12px;
+      font-family: 'Nunito', sans-serif;
+      color: var(--accent);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+    /* hidden native date input overlay */
+    .date-input-wrapper {
+      position: relative;
+      display: inline-flex;
+    }
+    .date-input-wrapper input[type=date] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ── Session Tabs ── */
+    .session-tabs {
+      display: flex;
+      gap: 6px;
+      padding: 10px 16px 0;
+      background: var(--bg);
+    }
+    .tab {
+      flex: 1;
+      padding: 7px 4px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text2);
+      font-family: 'Nunito', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.18s;
+      text-align: center;
+    }
+    .tab.active[data-tab=morning] {
+      background: var(--morning-d);
+      border-color: var(--morning);
+      color: var(--morning);
+    }
+    .tab.active[data-tab=evening] {
+      background: var(--evening-d);
+      border-color: var(--evening);
+      color: var(--evening);
+    }
+    .tab.active[data-tab=all] {
+      background: var(--accent-dim);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* ── Completion Banner ── */
+    .completion-row {
+      display: flex;
+      gap: 6px;
+      padding: 10px 16px 0;
+    }
+    .completion-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+    }
+    .completion-pill.done { background: var(--green-d); color: var(--green); }
+    .completion-pill.pending { background: var(--surface); color: var(--text3); border: 1px solid var(--border); }
+
+    /* ── Items Container ── */
+    .items-list {
+      padding: 12px 16px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .section-divider {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 0 2px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--text3);
+    }
+    .section-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+    .section-divider.morning-div { color: var(--morning); }
+    .section-divider.evening-div { color: var(--evening); }
+
+    .item-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      transition: border-color 0.2s;
+    }
+    .item-card.has-value { border-color: var(--border2); }
+
+    .item-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .item-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text3);
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .item-name {
+      flex: 1;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.3;
+    }
+    .info-btn {
+      flex-shrink: 0;
+      background: none;
+      border: none;
+      color: var(--text3);
+      cursor: pointer;
+      font-size: 16px;
+      line-height: 1;
+      padding: 2px;
+      border-radius: 50%;
+      transition: color 0.15s;
+    }
+    .info-btn:active { color: var(--accent); }
+
+    .item-question {
+      font-size: 13px;
+      color: var(--text2);
+      margin-bottom: 12px;
+      line-height: 1.45;
+    }
+
+    .item-note {
+      margin-top: 8px;
+      font-size: 11px;
+      color: var(--morning);
+      font-style: italic;
+    }
+
+    /* ── Likert Scale ── */
+    .scale-wrap { display: flex; flex-direction: column; gap: 5px; }
+    .scale-row {
+      display: grid;
+      gap: 4px;
+    }
+    .scale-row.scale-5 { grid-template-columns: repeat(5, 1fr); }
+    .scale-row.scale-7 { grid-template-columns: repeat(7, 1fr); }
+
+    .scale-btn {
+      height: 44px;
+      border-radius: 8px;
+      border: 1.5px solid var(--border);
+      background: var(--surface);
+      color: var(--text2);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.14s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .scale-btn.selected {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+      box-shadow: 0 2px 10px var(--accent-glo);
+    }
+    .scale-btn:active:not(.selected) { background: var(--card2); transform: scale(0.95); }
+
+    .scale-labels {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    .scale-labels span {
+      font-size: 10px;
+      color: var(--text3);
+      max-width: 64px;
+      line-height: 1.2;
+    }
+    .scale-labels span:last-child { text-align: right; }
+    .scale-labels span.mid { text-align: center; flex: 1; }
+
+    /* ── Number Control ── */
+    .number-control {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .num-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      border: 1.5px solid var(--border);
+      background: var(--surface);
+      color: var(--text2);
+      font-size: 22px;
+      font-weight: 300;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.14s;
+      flex-shrink: 0;
+    }
+    .num-btn:active { background: var(--card2); }
+    .num-input {
+      flex: 1;
+      height: 44px;
+      border-radius: 10px;
+      border: 1.5px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 20px;
+      font-weight: 500;
+      text-align: center;
+      -moz-appearance: textfield;
+      appearance: textfield;
+    }
+    .num-input::-webkit-outer-spin-button,
+    .num-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+    .num-input:focus { outline: none; border-color: var(--accent); }
+    .num-input::placeholder { color: var(--text3); font-size: 18px; }
+    .num-unit {
+      font-size: 12px;
+      color: var(--text3);
+      min-width: 30px;
+    }
+
+    /* ── Toggle (Binary) ── */
+    .toggle-wrap { display: flex; align-items: center; gap: 12px; }
+    .toggle-switch {
+      position: relative;
+      width: 52px;
+      height: 30px;
+    }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-track {
+      position: absolute;
+      inset: 0;
+      border-radius: 15px;
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .toggle-track::after {
+      content: '';
+      position: absolute;
+      left: 3px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--text3);
+      transition: all 0.2s;
+    }
+    .toggle-switch input:checked + .toggle-track {
+      background: var(--green-d);
+      border-color: var(--green);
+    }
+    .toggle-switch input:checked + .toggle-track::after {
+      left: calc(100% - 25px);
+      background: var(--green);
+    }
+    .toggle-label {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text2);
+      transition: color 0.2s;
+    }
+    .toggle-label.on { color: var(--green); }
+
+    /* ── Save Bar ── */
+    .save-bar {
+      position: sticky;
+      bottom: calc(var(--nav-h) + var(--safe-b));
+      z-index: 10;
+      padding: 12px 16px;
+      background: linear-gradient(to top, var(--bg) 75%, transparent);
+    }
+    .btn-save {
+      width: 100%;
+      height: 50px;
+      border-radius: 12px;
+      border: none;
+      background: var(--accent);
+      color: #fff;
+      font-family: 'Nunito', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: 0.2px;
+      transition: all 0.18s;
+      box-shadow: 0 4px 20px var(--accent-glo);
+    }
+    .btn-save:active { transform: scale(0.97); }
+    .btn-save.saved {
+      background: var(--green);
+      box-shadow: 0 4px 20px var(--green-d);
+    }
+
+    /* ── Bottom Nav ── */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 480px;
+      height: calc(var(--nav-h) + var(--safe-b));
+      padding-bottom: var(--safe-b);
+      background: var(--bg2);
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      z-index: 30;
+    }
+    .nav-btn {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      height: var(--nav-h);
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text3);
+      transition: color 0.15s;
+    }
+    .nav-btn.active { color: var(--accent); }
+    .nav-icon { font-size: 20px; line-height: 1; }
+    .nav-label { font-size: 10px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; font-family: 'Nunito', sans-serif; }
+
+    /* ── History View ── */
+    .history-header {
+      padding: calc(var(--safe-t) + 16px) 16px 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .view-title {
+      font-size: 18px;
+      font-weight: 700;
+    }
+    .history-empty {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      color: var(--text3);
+      padding: 40px;
+      text-align: center;
+    }
+    .history-empty-icon { font-size: 40px; }
+    .history-list { padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; }
+    .history-row {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 14px;
+      cursor: pointer;
+      transition: border-color 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .history-row:active { border-color: var(--accent); }
+    .history-date-block { flex: 1; min-width: 0; }
+    .history-date-main { font-size: 15px; font-weight: 700; }
+    .history-date-sub { font-size: 12px; color: var(--text2); margin-top: 1px; }
+    .history-pills { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
+    .history-pill {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 20px;
+    }
+    .history-pill.m-done { background: var(--morning-d); color: var(--morning); }
+    .history-pill.e-done { background: var(--evening-d); color: var(--evening); }
+    .history-pill.backdated { background: var(--accent-dim); color: var(--accent); }
+    .history-metrics {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 3px;
+      flex-shrink: 0;
+    }
+    .history-metric {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--text2);
+    }
+    .history-metric span { color: var(--text); font-weight: 500; }
+    .history-chevron { color: var(--text3); font-size: 16px; }
+
+    /* ── Settings View ── */
+    .settings-header {
+      padding: calc(var(--safe-t) + 16px) 16px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .settings-body { padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+    .settings-section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .settings-section-title {
+      padding: 12px 14px 8px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--text3);
+      border-bottom: 1px solid var(--border);
+    }
+    .settings-row {
+      display: flex;
+      align-items: center;
+      padding: 12px 14px;
+      gap: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .settings-row:last-child { border-bottom: none; }
+    .settings-row-label { flex: 1; font-size: 14px; font-weight: 600; }
+    .settings-row-sub { font-size: 12px; color: var(--text3); margin-top: 2px; }
+    .time-input {
+      height: 36px;
+      padding: 0 10px;
+      border-radius: 8px;
+      border: 1.5px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .time-input:focus { outline: none; border-color: var(--accent); }
+    .settings-note {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 12px;
+      color: var(--text2);
+      line-height: 1.6;
+    }
+    .btn-secondary {
+      width: 100%;
+      height: 46px;
+      border-radius: 10px;
+      border: 1.5px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font-family: 'Nunito', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-secondary:active { background: var(--card2); }
+    .btn-danger {
+      border-color: var(--red);
+      color: var(--red);
+    }
+    .btn-export {
+      background: var(--accent-dim);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* ── Info Overlay ── */
+    .overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(4px);
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .overlay.open { display: flex; }
+    .overlay-card {
+      background: var(--card);
+      border: 1px solid var(--border2);
+      border-radius: 20px 20px 0 0;
+      padding: 20px 20px calc(var(--safe-b) + 24px);
+      width: 100%;
+      max-width: 480px;
+      animation: slideUp 0.22s ease;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to   { transform: translateY(0); }
+    }
+    .overlay-handle {
+      width: 36px;
+      height: 4px;
+      border-radius: 2px;
+      background: var(--border2);
+      margin: 0 auto 16px;
+    }
+    .overlay-title { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+    .overlay-question { font-size: 13px; color: var(--text2); margin-bottom: 12px; font-style: italic; }
+    .overlay-body { font-size: 14px; color: var(--text2); line-height: 1.7; }
+    .overlay-close {
+      width: 100%;
+      margin-top: 18px;
+      height: 46px;
+      border-radius: 10px;
+      border: 1.5px solid var(--border2);
+      background: var(--surface);
+      color: var(--text2);
+      font-family: 'Nunito', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed;
+      bottom: calc(var(--nav-h) + var(--safe-b) + 16px);
+      left: 50%;
+      transform: translateX(-50%) translateY(10px);
+      background: var(--card2);
+      border: 1px solid var(--border2);
+      border-radius: 10px;
+      padding: 10px 18px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      z-index: 200;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ── LOG VIEW ── -->
+  <div id="view-log" class="view active">
+    <header class="app-header">
+      <div class="header-left">
+        <div class="app-title">Daily Tracker</div>
+        <div class="header-date-row">
+          <span class="header-date-label" id="header-date-label">—</span>
+          <div class="date-input-wrapper">
+            <button class="date-picker-btn">change</button>
+            <input type="date" id="date-picker" aria-label="Select date">
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="session-tabs" id="session-tabs">
+      <button class="tab active" data-tab="morning">Morning</button>
+      <button class="tab" data-tab="evening">Evening</button>
+      <button class="tab" data-tab="all">All</button>
+    </div>
+
+    <div class="completion-row" id="completion-row"></div>
+
+    <div class="items-list" id="items-list"></div>
+
+    <div class="save-bar">
+      <button class="btn-save" id="btn-save">Save</button>
+    </div>
+  </div>
+
+  <!-- ── HISTORY VIEW ── -->
+  <div id="view-history" class="view">
+    <div class="history-header">
+      <div class="view-title">History</div>
+    </div>
+    <div id="history-content"></div>
+  </div>
+
+  <!-- ── SETTINGS VIEW ── -->
+  <div id="view-settings" class="view">
+    <div class="settings-header">
+      <div class="view-title">Settings</div>
+    </div>
+    <div class="settings-body">
+      <div class="settings-section">
+        <div class="settings-section-title">Notifications</div>
+        <div class="settings-row">
+          <div>
+            <div class="settings-row-label">☀️ Morning reminder</div>
+            <div class="settings-row-sub">For sleep & morning items</div>
+          </div>
+          <input type="time" class="time-input" id="notif-morning" value="08:00">
+        </div>
+        <div class="settings-row">
+          <div>
+            <div class="settings-row-label">🌙 Evening reminder</div>
+            <div class="settings-row-sub">For daily reflection items</div>
+          </div>
+          <input type="time" class="time-input" id="notif-evening" value="21:00">
+        </div>
+      </div>
+      <div class="settings-note">
+        ⚠️ <strong>Notifications on iOS</strong> require the app to be added to your home screen and iOS 16.4+. The app checks for reminders each time it opens. For reliable daily reminders, set up an iOS Shortcut/Automation to open the app at your set times.
+      </div>
+      <button class="btn-secondary btn-export" id="btn-export-settings">⬇ Export CSV</button>
+      <button class="btn-secondary btn-danger" id="btn-clear-data">Clear all data…</button>
+    </div>
+  </div>
+
+  <!-- ── Bottom Nav ── -->
+  <nav class="bottom-nav">
+    <button class="nav-btn active" data-view="log">
+      <span class="nav-icon">✏️</span>
+      <span class="nav-label">Log</span>
+    </button>
+    <button class="nav-btn" data-view="history">
+      <span class="nav-icon">📋</span>
+      <span class="nav-label">History</span>
+    </button>
+    <button class="nav-btn" id="nav-export">
+      <span class="nav-icon">⬇️</span>
+      <span class="nav-label">Export</span>
+    </button>
+    <button class="nav-btn" data-view="settings">
+      <span class="nav-icon">⚙️</span>
+      <span class="nav-label">Settings</span>
+    </button>
+  </nav>
+</div>
+
+<!-- Info overlay -->
+<div class="overlay" id="info-overlay">
+  <div class="overlay-card">
+    <div class="overlay-handle"></div>
+    <div class="overlay-title" id="info-title"></div>
+    <div class="overlay-question" id="info-question"></div>
+    <div class="overlay-body" id="info-body"></div>
+    <button class="overlay-close" id="info-close">Got it</button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+/* ════════════════════════════════════════
+   ITEM DEFINITIONS
+════════════════════════════════════════ */
+const ITEMS = [
+  { id:1,  key:'sleep_duration',         session:'morning', prevDay:true,  type:'continuous', step:0.5, min:0, max:24,
+    name:'Sleep Duration',
+    question:'How many hours did you sleep last night?',
+    helper:'Use decimal hours (e.g. 7.5 = 7 hrs 30 min). Count from when you fell asleep, not when you got into bed. This is stored against yesterday\'s date.',
+    la:'0 hrs', ra:'24 hrs', unit:'hrs' },
+
+  { id:2,  key:'sleep_onset_difficulty', session:'morning', prevDay:true,  type:'likert5',
+    name:'Sleep Onset Difficulty',
+    question:'Once in bed, how difficult was it to fall asleep?',
+    helper:'1 = asleep almost immediately. 2 = slight delay, up to 30 mins. 3 = some delay, up to one hour. 4 = significant delay, up to 2 hours. 5 = very difficult to sleep, more than two hours delay.',
+    la:'Easy', ra:'Very hard' },
+
+  { id:3,  key:'sleep_avoidance',        session:'morning', prevDay:true,  type:'likert5',
+    name:'Sleep Avoidance',
+    question:'Did you delay going to bed last night despite feeling tired?',
+    helper:'1 = on time. 2 = 1–2 hrs late. 3 = 3–4 hrs late. 4 = 5–6 hrs late. 5 = did not go to bed. Covers the decision to go to bed, not what happened once there.',
+    la:'On time', ra:'No sleep' },
+
+  { id:4,  key:'cognitive_clarity',      session:'morning', prevDay:false, type:'likert5',
+    name:'Cognitive Clarity',
+    question:'How clear and sharp does your thinking feel right now, before medication or coffee?',
+    helper:'1 = severe fog. 2 = very foggy. 3 = a little foggy. 4 = sleepy, but able to focus. 5 = alert and focused.',
+    la:'Foggy', ra:'Sharp' },
+
+  { id:5,  key:'morning_anxiety_dread',  session:'morning', prevDay:false, type:'likert5',
+    name:'Morning Anxiety / Dread',
+    question:'How much anxiety or dread do you feel about the day ahead?',
+    helper:'1 = calm. 3 = background dread. 5 = overwhelming dread.',
+    la:'Calm', ra:'Dread' },
+
+  { id:6,  key:'medication_taken',       session:'evening', prevDay:false, type:'binary',
+    name:'Medication Taken',
+    question:'Did you take your medication today?',
+    helper:'Log when taken if your timing varies.' },
+
+  { id:7,  key:'caffeine_intake',        session:'evening', prevDay:false, type:'integer', min:0, max:20,
+    name:'Caffeine Intake',
+    question:'How many caffeine units did you consume today?',
+    helper:'1 unit = espresso or cup of tea. Filter coffee or double espresso = 2 units.',
+    unit:'units' },
+
+  { id:8,  key:'mood_affect_valence',    session:'evening', prevDay:false, type:'likert7',
+    name:'Mood',
+    question:'How would you rate your overall mood today?',
+    helper:'1 = very depressed. 2 = quite depressed. 3 = a little depressed. 4 = neutral. 5 = a little positive. 6 = quite positive. 7 = very positive.',
+    la:'Depressed', ma:'Neutral', ra:'Positive' },
+
+  { id:9,  key:'anxiety_day_avg',        session:'evening', prevDay:false, type:'likert5',
+    name:'Anxiety',
+    question:'On average, how anxious did you feel today?',
+    helper:'1 = calm throughout. 3 = significant background anxiety. 5 = overwhelming.',
+    la:'Calm', ra:'Overwhelming' },
+
+  { id:10, key:'emotional_dysregulation',session:'evening', prevDay:false, type:'likert5',
+    name:'Emotional Dysregulation',
+    question:'How well did you manage your emotions today? Includes frustration, emotional flooding, sudden mood shifts.',
+    helper:'1 = stable. 3 = regulation with significant effort. 5 = overwhelming volatility.',
+    la:'Stable', ra:'Volatile' },
+
+  { id:11, key:'executive_function',     session:'evening', prevDay:false, type:'likert5',
+    name:'Executive Function',
+    question:'How much difficulty did you have directing thoughts and staying on task?',
+    helper:'1 = total lack of control. 2 = directed thinking only occasionally possible. 3 = staying on task with significant effort. 4 = mostly on task with some effort. 5 = executive almost entirely integrated.',
+    la:'No control', ra:'Integrated' },
+
+  { id:12, key:'task_flow_ease',         session:'evening', prevDay:false, type:'likert7',
+    name:'Task Flow / Ease',
+    question:'How much did tasks feel effortful versus fluid today?',
+    helper:'1 = complete paralysis, could not engage. 4 = neutral. 7 = complete flow, fully absorbed.',
+    la:'Paralysis', ma:'Neutral', ra:'Full flow' },
+
+  { id:13, key:'social_load',            session:'evening', prevDay:false, type:'likert5',
+    name:'Social Load',
+    question:'How draining was your social interaction today? Rate demand, not just contact time.',
+    helper:'1 = a quiet day alone, even with brief messages. 2 = normal social encounters at work. 3 = minor low-level interactions. 4 = significant social load (after-work drinks, team meeting). 5 = whole-day engagement or intense interaction.',
+    la:'Minimal', ra:'Overwhelmed' },
+
+  { id:14, key:'routine_disruption',     session:'evening', prevDay:false, type:'likert5',
+    name:'Routine Disruption',
+    question:'How much did your day deviate from your ideal routine?',
+    helper:'1 = no disruption, day as expected. 3 = moderate disruption. 5 = routine completely derailed.',
+    la:'None', ra:'Derailed' },
+
+  { id:15, key:'gi_discomfort',          session:'evening', prevDay:false, type:'likert5',
+    name:'GI Discomfort',
+    question:'How much gastrointestinal discomfort did you experience today? Includes bloating, nausea, cramps, constipation, or diarrhoea.',
+    helper:'1 = none. 2 = some gas or bloating. 3 = minor cramps, some gas. 4 = minor loose bowels, quite gassy. 5 = extremely gassy, blood, sharp cramps, loose bowels.',
+    la:'None', ra:'Severe' },
+
+  { id:16, key:'eating_properly',        session:'evening', prevDay:false, type:'likert5',
+    name:'Eating Properly',
+    question:'How well did you eat today?',
+    helper:'1 = skipped most meals or poor choices. 3 = ate, but not when I needed to. 5 = regular, balanced meals.',
+    la:'Poorly', ra:'Well' },
+
+  { id:17, key:'exercise',               session:'evening', prevDay:false, type:'likert5',
+    name:'Exercise',
+    question:'What was the intensity of your physical activity today?',
+    helper:'1 = none. 2 = light (gentle walk/stretch). 3 = moderate (brisk walk, light gym, 20–45 min). 4 = high (vigorous, 45–90 min). 5 = heavy (intense, 90+ min).',
+    la:'None', ra:'Heavy' },
+
+  { id:18, key:'perceived_productivity', session:'evening', prevDay:false, type:'likert5',
+    name:'Perceived Productivity',
+    question:'How productive did you feel today? Rate your subjective sense of productivity, not objective output.',
+    helper:'1 = total write-off. 2 = washed dishes, sent an email. 3 = several tasks, some progress. 4 = quite productive. 5 = extremely productive, exceeded expectations.',
+    la:'Write-off', ra:'Highly productive' },
+
+  { id:19, key:'hydration',              session:'evening', prevDay:false, type:'likert5',
+    name:'Hydration',
+    question:'How well hydrated were you today?',
+    helper:'1 = barely drank anything. 2 = 1–2 glasses of water. 3 = around 1L. 4 = two water bottles, four glasses. 5 = consistently well hydrated.',
+    la:'Poor', ra:'Excellent' },
+
+  { id:20, key:'fatigue',                session:'evening', prevDay:false, type:'likert5',
+    name:'Fatigue',
+    question:'How fatigued did you feel today, beyond just sleepiness?',
+    helper:'1 = none, felt energised. 2 = mild tiredness. 3 = moderate fatigue. 4 = significant fatigue. 5 = severe, barely functional.',
+    la:'Energised', ra:'Exhausted' },
+];
+
+/* ════════════════════════════════════════
+   CSV COLUMN MAP (internal key → CSV header)
+════════════════════════════════════════ */
+const CSV_KEY = {
+  mood_affect_valence: 'mood',
+  anxiety_day_avg:     'anxiety',
+  task_flow_ease:      'task_flow',
+};
+const CSV_HEADERS = [
+  'date','sleep_duration','sleep_onset_difficulty','sleep_avoidance',
+  'cognitive_clarity','morning_anxiety_dread','medication_taken','caffeine_intake',
+  'mood','anxiety','emotional_dysregulation','executive_function','task_flow',
+  'social_load','routine_disruption','gi_discomfort','eating_properly','exercise',
+  'perceived_productivity','hydration','fatigue','morning_complete','evening_complete','backdated'
+];
+// Reverse map: CSV header → internal key
+const CSV_TO_KEY = {};
+CSV_HEADERS.forEach(h => {
+  const match = Object.entries(CSV_KEY).find(([k,v]) => v === h);
+  CSV_TO_KEY[h] = match ? match[0] : h;
+});
+
+/* ════════════════════════════════════════
+   STORAGE
+════════════════════════════════════════ */
+const REC_KEY  = 'dt_records_v1';
+const SETT_KEY = 'dt_settings_v1';
+
+function loadRecords() {
+  try { return JSON.parse(localStorage.getItem(REC_KEY) || '{}'); }
+  catch { return {}; }
+}
+function saveRecords(r) { localStorage.setItem(REC_KEY, JSON.stringify(r)); }
+function loadSettings() {
+  try { return JSON.parse(localStorage.getItem(SETT_KEY) || '{}'); }
+  catch { return {}; }
+}
+function saveSettings(s) { localStorage.setItem(SETT_KEY, JSON.stringify(s)); }
+
+/* ════════════════════════════════════════
+   DATE UTILS
+════════════════════════════════════════ */
+function todayStr() {
+  const d = new Date();
+  return [d.getFullYear(), String(d.getMonth()+1).padStart(2,'0'), String(d.getDate()).padStart(2,'0')].join('-');
+}
+function prevDay(dateStr) {
+  const d = new Date(dateStr + 'T12:00:00');
+  d.setDate(d.getDate() - 1);
+  return d.toISOString().slice(0,10);
+}
+function formatDate(dateStr) {
+  const d = new Date(dateStr + 'T12:00:00');
+  return d.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short', year:'numeric' });
+}
+function formatDateShort(dateStr) {
+  const d = new Date(dateStr + 'T12:00:00');
+  return d.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' });
+}
+
+/* ════════════════════════════════════════
+   STATE
+════════════════════════════════════════ */
+let st = {
+  view:    'log',
+  logDate: todayStr(),
+  tab:     'morning',  // 'morning' | 'evening' | 'all'
+  pv:      {},         // pendingValues: key → value
+};
+
+function defaultTab() {
+  const h = new Date().getHours();
+  return h < 13 ? 'morning' : 'evening';
+}
+
+function loadPending() {
+  const recs   = loadRecords();
+  const rec    = recs[st.logDate]   || {};
+  const preRec = recs[prevDay(st.logDate)] || {};
+  st.pv = {};
+  ITEMS.forEach(item => {
+    const src = item.prevDay ? preRec : rec;
+    if (src[item.key] != null) st.pv[item.key] = src[item.key];
+  });
+}
+
+/* ════════════════════════════════════════
+   NAVIGATION
+════════════════════════════════════════ */
+function navigateTo(view) {
+  st.view = view;
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-' + view).classList.add('active');
+  document.querySelectorAll('.nav-btn[data-view]').forEach(b => {
+    b.classList.toggle('active', b.dataset.view === view);
+  });
+  if (view === 'log')      renderLog();
+  if (view === 'history')  renderHistory();
+  if (view === 'settings') renderSettings();
+}
+
+/* ════════════════════════════════════════
+   RENDER: LOG VIEW
+════════════════════════════════════════ */
+function renderLog() {
+  // Date label
+  document.getElementById('header-date-label').textContent = formatDate(st.logDate);
+  document.getElementById('date-picker').value = st.logDate;
+  document.getElementById('date-picker').max = todayStr();
+
+  // Tabs
+  document.querySelectorAll('.tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.tab === st.tab);
+  });
+
+  // Completion pills
+  const rec = loadRecords()[st.logDate] || {};
+  const pillHtml = [
+    rec.morning_complete ? `<span class="completion-pill done">☀ Morning ✓</span>` : `<span class="completion-pill pending">☀ Morning</span>`,
+    rec.evening_complete ? `<span class="completion-pill done">🌙 Evening ✓</span>` : `<span class="completion-pill pending">🌙 Evening</span>`,
+  ].join('');
+  document.getElementById('completion-row').innerHTML = pillHtml;
+
+  // Items
+  const list = document.getElementById('items-list');
+  const visible = st.tab === 'all' ? ITEMS : ITEMS.filter(i => i.session === st.tab);
+  let html = '';
+
+  if (st.tab === 'all') {
+    html += `<div class="section-divider morning-div">☀ Morning</div>`;
+    ITEMS.filter(i => i.session === 'morning').forEach(item => { html += renderItem(item); });
+    html += `<div class="section-divider evening-div">🌙 Evening</div>`;
+    ITEMS.filter(i => i.session === 'evening').forEach(item => { html += renderItem(item); });
+  } else {
+    visible.forEach(item => { html += renderItem(item); });
+  }
+
+  list.innerHTML = html;
+
+  // Save button label
+  const btn = document.getElementById('btn-save');
+  btn.classList.remove('saved');
+  btn.textContent = 'Save';
+
+  attachItemListeners();
+}
+
+function renderItem(item) {
+  const val = st.pv[item.key];
+  const hasVal = val != null;
+  let ctrl = '';
+
+  if (item.type === 'likert5') ctrl = renderLikert(item, 5, val);
+  else if (item.type === 'likert7') ctrl = renderLikert(item, 7, val);
+  else if (item.type === 'continuous') ctrl = renderNumber(item, val);
+  else if (item.type === 'integer') ctrl = renderNumber(item, val);
+  else if (item.type === 'binary') ctrl = renderBinary(item, val);
+
+  const note = item.prevDay
+    ? `<p class="item-note">↳ Stored to ${formatDateShort(prevDay(st.logDate))}</p>`
+    : '';
+
+  return `
+    <div class="item-card${hasVal ? ' has-value' : ''}">
+      <div class="item-header">
+        <span class="item-num">${String(item.id).padStart(2,'0')}</span>
+        <span class="item-name">${item.name}</span>
+        <button class="info-btn" data-info="${item.key}" aria-label="Info">ⓘ</button>
+      </div>
+      <p class="item-question">${item.question}</p>
+      ${ctrl}
+      ${note}
+    </div>`;
+}
+
+function renderLikert(item, n, val) {
+  let btns = '';
+  for (let i = 1; i <= n; i++) {
+    btns += `<button class="scale-btn${val === i ? ' selected' : ''}" data-key="${item.key}" data-val="${i}">${i}</button>`;
+  }
+  const la = item.la || '';
+  const ra = item.ra || '';
+  const ma = item.ma || '';
+  let labels = '';
+  if (la || ra) {
+    if (n === 7 && ma) {
+      labels = `<div class="scale-labels"><span>${la}</span><span class="mid">${ma}</span><span>${ra}</span></div>`;
+    } else {
+      labels = `<div class="scale-labels"><span>${la}</span><span>${ra}</span></div>`;
+    }
+  }
+  return `<div class="scale-wrap"><div class="scale-row scale-${n}">${btns}</div>${labels}</div>`;
+}
+
+function renderNumber(item, val) {
+  const step = item.step || 1;
+  const min  = item.min  ?? 0;
+  const max  = item.max  || 99;
+  const unit = item.unit ? `<span class="num-unit">${item.unit}</span>` : '';
+  return `
+    <div class="number-control">
+      <button class="num-btn" data-key="${item.key}" data-action="dec" data-step="${step}" data-min="${min}" data-max="${max}">−</button>
+      <input class="num-input" type="number" data-key="${item.key}"
+             value="${val ?? ''}" min="${min}" max="${max}" step="${step}" placeholder="—">
+      <button class="num-btn" data-key="${item.key}" data-action="inc" data-step="${step}" data-min="${min}" data-max="${max}">+</button>
+      ${unit}
+    </div>`;
+}
+
+function renderBinary(item, val) {
+  const checked = val === 1 ? 'checked' : '';
+  const labelClass = val === 1 ? ' on' : '';
+  const labelText  = val === 1 ? 'Yes' : 'No';
+  return `
+    <div class="toggle-wrap">
+      <label class="toggle-switch">
+        <input type="checkbox" data-key="${item.key}" ${checked}>
+        <span class="toggle-track"></span>
+      </label>
+      <span class="toggle-label${labelClass}" data-tlabel="${item.key}">${labelText}</span>
+    </div>`;
+}
+
+/* ════════════════════════════════════════
+   ATTACH ITEM LISTENERS
+════════════════════════════════════════ */
+function attachItemListeners() {
+  // Scale buttons
+  document.querySelectorAll('.scale-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const key = btn.dataset.key;
+      const val = parseInt(btn.dataset.val);
+      st.pv[key] = val;
+      const card = btn.closest('.item-card');
+      card.classList.add('has-value');
+      card.querySelectorAll('.scale-btn').forEach(b => {
+        b.classList.toggle('selected', parseInt(b.dataset.val) === val);
+      });
+    });
+  });
+
+  // +/- buttons
+  document.querySelectorAll('.num-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const key  = btn.dataset.key;
+      const step = parseFloat(btn.dataset.step);
+      const min  = parseFloat(btn.dataset.min);
+      const max  = parseFloat(btn.dataset.max);
+      const inp  = document.querySelector(`.num-input[data-key="${key}"]`);
+      let v = parseFloat(inp.value);
+      if (isNaN(v)) v = 0;
+      v = btn.dataset.action === 'inc' ? Math.min(max, v + step) : Math.max(min, v - step);
+      // Round to avoid floating-point drift
+      v = Math.round(v * 10) / 10;
+      inp.value = v;
+      st.pv[key] = v;
+      inp.closest('.item-card').classList.add('has-value');
+    });
+  });
+
+  // Number inputs (manual type)
+  document.querySelectorAll('.num-input').forEach(inp => {
+    inp.addEventListener('input', () => {
+      const v = parseFloat(inp.value);
+      st.pv[inp.dataset.key] = isNaN(v) ? null : v;
+    });
+  });
+
+  // Checkboxes
+  document.querySelectorAll('input[type=checkbox][data-key]').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const key = cb.dataset.key;
+      const isOn = cb.checked;
+      st.pv[key] = isOn ? 1 : 0;
+      const label = document.querySelector(`[data-tlabel="${key}"]`);
+      if (label) { label.textContent = isOn ? 'Yes' : 'No'; label.className = 'toggle-label' + (isOn ? ' on' : ''); }
+      cb.closest('.item-card').classList.toggle('has-value', isOn);
+    });
+  });
+
+  // Info buttons
+  document.querySelectorAll('.info-btn').forEach(btn => {
+    btn.addEventListener('click', () => showInfo(btn.dataset.info));
+  });
+}
+
+/* ════════════════════════════════════════
+   SAVE SESSION
+════════════════════════════════════════ */
+function saveSession() {
+  const recs = loadRecords();
+  const today = todayStr();
+  const isBack = st.logDate !== today;
+  const doMorn = st.tab === 'morning' || st.tab === 'all';
+  const doEve  = st.tab === 'evening' || st.tab === 'all';
+
+  if (doMorn) {
+    const pd = prevDay(st.logDate);
+    recs[pd] = recs[pd] || {};
+    ITEMS.filter(i => i.prevDay).forEach(item => {
+      if (st.pv[item.key] != null) recs[pd][item.key] = st.pv[item.key];
+    });
+
+    recs[st.logDate] = recs[st.logDate] || {};
+    ITEMS.filter(i => i.session === 'morning' && !i.prevDay).forEach(item => {
+      if (st.pv[item.key] != null) recs[st.logDate][item.key] = st.pv[item.key];
+    });
+    recs[st.logDate].morning_complete = 1;
+  }
+
+  if (doEve) {
+    recs[st.logDate] = recs[st.logDate] || {};
+    ITEMS.filter(i => i.session === 'evening').forEach(item => {
+      if (st.pv[item.key] != null) recs[st.logDate][item.key] = st.pv[item.key];
+    });
+    recs[st.logDate].evening_complete = 1;
+  }
+
+  if (isBack) {
+    recs[st.logDate] = recs[st.logDate] || {};
+    recs[st.logDate].backdated = 1;
+  }
+
+  saveRecords(recs);
+
+  const btn = document.getElementById('btn-save');
+  btn.textContent = '✓ Saved';
+  btn.classList.add('saved');
+  setTimeout(() => { btn.textContent = 'Save'; btn.classList.remove('saved'); }, 2000);
+  showToast('Entry saved');
+
+  // Refresh completion pills
+  const rec = recs[st.logDate] || {};
+  const pillHtml = [
+    rec.morning_complete ? `<span class="completion-pill done">☀ Morning ✓</span>` : `<span class="completion-pill pending">☀ Morning</span>`,
+    rec.evening_complete ? `<span class="completion-pill done">🌙 Evening ✓</span>` : `<span class="completion-pill pending">🌙 Evening</span>`,
+  ].join('');
+  document.getElementById('completion-row').innerHTML = pillHtml;
+}
+
+/* ════════════════════════════════════════
+   RENDER: HISTORY
+════════════════════════════════════════ */
+function renderHistory() {
+  const recs = loadRecords();
+  const dates = Object.keys(recs).sort().reverse();
+  const cont = document.getElementById('history-content');
+
+  if (dates.length === 0) {
+    cont.innerHTML = `
+      <div class="history-empty">
+        <div class="history-empty-icon">📭</div>
+        <div>No entries yet</div>
+        <div style="font-size:13px;color:var(--text3)">Start logging with the Log tab</div>
+      </div>`;
+    return;
+  }
+
+  const rows = dates.map(date => {
+    const r = recs[date];
+    const mDone = r.morning_complete ? `<span class="history-pill m-done">☀ Morning</span>` : '';
+    const eDone = r.evening_complete ? `<span class="history-pill e-done">🌙 Evening</span>` : '';
+    const back  = r.backdated ? `<span class="history-pill backdated">backdated</span>` : '';
+
+    const mood = r.mood_affect_valence != null ? `<div class="history-metric">mood <span>${r.mood_affect_valence}/7</span></div>` : '';
+    const slp  = r.sleep_duration != null ? `<div class="history-metric">sleep <span>${r.sleep_duration}h</span></div>` : '';
+    const fat  = r.fatigue != null ? `<div class="history-metric">fatigue <span>${r.fatigue}/5</span></div>` : '';
+
+    return `
+      <div class="history-row" data-date="${date}">
+        <div class="history-date-block">
+          <div class="history-date-main">${formatDateShort(date)}</div>
+          <div class="history-pills">${mDone}${eDone}${back}</div>
+        </div>
+        <div class="history-metrics">${slp}${mood}${fat}</div>
+        <div class="history-chevron">›</div>
+      </div>`;
+  }).join('');
+
+  cont.innerHTML = `<div class="history-list">${rows}</div>`;
+
+  cont.querySelectorAll('.history-row').forEach(row => {
+    row.addEventListener('click', () => {
+      st.logDate = row.dataset.date;
+      st.tab = 'all';
+      loadPending();
+      navigateTo('log');
+    });
+  });
+}
+
+/* ════════════════════════════════════════
+   RENDER: SETTINGS
+════════════════════════════════════════ */
+function renderSettings() {
+  const s = loadSettings();
+  document.getElementById('notif-morning').value = s.morningTime || '08:00';
+  document.getElementById('notif-evening').value = s.eveningTime || '21:00';
+}
+
+/* ════════════════════════════════════════
+   CSV EXPORT
+════════════════════════════════════════ */
+function exportCSV() {
+  const recs = loadRecords();
+  const dates = Object.keys(recs).sort();
+  if (dates.length === 0) { showToast('No data to export'); return; }
+
+  const rows = dates.map(date => {
+    const r = recs[date] || {};
+    return CSV_HEADERS.map(h => {
+      const k = CSV_TO_KEY[h];
+      const v = r[k];
+      return v == null ? '' : v;
+    });
+  });
+
+  const csv = [CSV_HEADERS, ...rows].map(r => r.join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `daily_tracker_${todayStr()}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('CSV exported');
+}
+
+/* ════════════════════════════════════════
+   INFO OVERLAY
+════════════════════════════════════════ */
+function showInfo(key) {
+  const item = ITEMS.find(i => i.key === key);
+  if (!item) return;
+  document.getElementById('info-title').textContent = item.name;
+  document.getElementById('info-question').textContent = item.question;
+  document.getElementById('info-body').textContent = item.helper;
+  document.getElementById('info-overlay').classList.add('open');
+}
+function hideInfo() {
+  document.getElementById('info-overlay').classList.remove('open');
+}
+
+/* ════════════════════════════════════════
+   TOAST
+════════════════════════════════════════ */
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+/* ════════════════════════════════════════
+   NOTIFICATIONS
+════════════════════════════════════════ */
+async function requestNotifPermission() {
+  if (!('Notification' in window)) return;
+  if (Notification.permission === 'default') {
+    await Notification.requestPermission();
+  }
+}
+
+function checkReminderOnOpen() {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  const s = loadSettings();
+  const now = new Date();
+  const hh  = now.getHours();
+  const mm  = now.getMinutes();
+  const timeStr = `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
+
+  const [mh, mmn] = (s.morningTime || '08:00').split(':').map(Number);
+  const [eh, emn] = (s.eveningTime || '21:00').split(':').map(Number);
+
+  const withinWindow = (th, tm) => {
+    const diff = (hh * 60 + mm) - (th * 60 + tm);
+    return diff >= 0 && diff <= 5; // within 5 min window
+  };
+
+  const recs = loadRecords();
+  const today = todayStr();
+  const rec = recs[today] || {};
+
+  if (withinWindow(mh, mmn) && !rec.morning_complete) {
+    new Notification('Daily Tracker', { body: '☀️ Time for your morning check-in', icon: '' });
+  } else if (withinWindow(eh, emn) && !rec.evening_complete) {
+    new Notification('Daily Tracker', { body: '🌙 Time for your evening check-in', icon: '' });
+  }
+}
+
+/* ════════════════════════════════════════
+   SERVICE WORKER
+════════════════════════════════════════ */
+function registerSW() {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+}
+
+/* ════════════════════════════════════════
+   INIT
+════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', () => {
+  st.logDate = todayStr();
+  st.tab = defaultTab();
+  loadPending();
+  renderLog();
+  registerSW();
+  requestNotifPermission();
+  setTimeout(checkReminderOnOpen, 500);
+
+  // ── Date picker
+  document.getElementById('date-picker').addEventListener('change', e => {
+    const v = e.target.value;
+    if (!v) return;
+    st.logDate = v;
+    st.tab = v === todayStr() ? defaultTab() : 'all';
+    loadPending();
+    renderLog();
+  });
+
+  // ── Session tabs
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      st.tab = tab.dataset.tab;
+      renderLog();
+    });
+  });
+
+  // ── Save
+  document.getElementById('btn-save').addEventListener('click', saveSession);
+
+  // ── Bottom nav
+  document.querySelectorAll('.nav-btn[data-view]').forEach(btn => {
+    btn.addEventListener('click', () => navigateTo(btn.dataset.view));
+  });
+
+  // ── Export nav
+  document.getElementById('nav-export').addEventListener('click', exportCSV);
+
+  // ── Info overlay
+  document.getElementById('info-close').addEventListener('click', hideInfo);
+  document.getElementById('info-overlay').addEventListener('click', e => {
+    if (e.target === e.currentTarget) hideInfo();
+  });
+
+  // ── Settings: save notification times
+  ['notif-morning', 'notif-evening'].forEach(id => {
+    document.getElementById(id).addEventListener('change', () => {
+      const s = loadSettings();
+      s.morningTime = document.getElementById('notif-morning').value;
+      s.eveningTime = document.getElementById('notif-evening').value;
+      saveSettings(s);
+      showToast('Settings saved');
+    });
+  });
+
+  // ── Export from settings
+  document.getElementById('btn-export-settings').addEventListener('click', exportCSV);
+
+  // ── Clear data
+  document.getElementById('btn-clear-data').addEventListener('click', () => {
+    if (confirm('This will permanently delete all recorded data. Are you sure?')) {
+      localStorage.removeItem(REC_KEY);
+      st.pv = {};
+      renderLog();
+      showToast('All data cleared');
+    }
+  });
+});
+</script>
+</body>
+</html>

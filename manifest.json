@@ -1,0 +1,24 @@
+{
+  "name": "Daily Tracker",
+  "short_name": "Tracker",
+  "description": "Personal daily tracking app",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b0b14",
+  "theme_color": "#0b0b14",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='40' fill='%230b0b14'/%3E%3Crect x='40' y='110' width='16' height='42' rx='4' fill='%238b7cf8'/%3E%3Crect x='64' y='88' width='16' height='64' rx='4' fill='%238b7cf8'/%3E%3Crect x='88' y='68' width='16' height='84' rx='4' fill='%23c084fc'/%3E%3Crect x='112' y='78' width='16' height='74' rx='4' fill='%238b7cf8'/%3E%3Crect x='136' y='50' width='16' height='102' rx='4' fill='%23c084fc'/%3E%3C/svg%3E",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='100' fill='%230b0b14'/%3E%3Crect x='100' y='290' width='46' height='122' rx='10' fill='%238b7cf8'/%3E%3Crect x='170' y='230' width='46' height='182' rx='10' fill='%238b7cf8'/%3E%3Crect x='240' y='180' width='46' height='232' rx='10' fill='%23c084fc'/%3E%3Crect x='310' y='205' width='46' height='207' rx='10' fill='%238b7cf8'/%3E%3Crect x='380' y='130' width='46' height='282' rx='10' fill='%23c084fc'/%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
