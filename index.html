@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Daily Tracker</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0b0b14">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <style>
+    :root {
+      --bg: #0b0b14;
+      --surface: #13131f;
+      --surface2: #1c1c2e;
+      --accent: #8b7cf8;
+      --accent2: #c084fc;
+      --text: #e2e2f0;
+      --text-muted: #7070a0;
+      --border: #252540;
+      --success: #4ade80;
+      --danger: #f87171;
+      --warn: #fbbf24;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      max-width: 640px;
+      margin: 0 auto;
+      position: relative;
+    }
+    /* ── HEADER ── */
+    .header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 16px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .header-title {
+      font-size: 18px;
+      font-weight: 700;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .header-date {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+    /* ── BOTTOM NAV ── */
+    .nav {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      position: fixed;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 640px;
+      display: flex;
+      z-index: 100;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    .nav-btn {
+      flex: 1;
+      padding: 10px 4px 12px;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      font-size: 11px;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+    .nav-btn.active { color: var(--accent); }
+    .nav-btn svg { width: 22px; height: 22px; stroke-width: 1.8; }
+    /* ── CONTENT ── */
+    .view { display: none; padding: 16px 16px 100px; }
+    .view.active { display: block; }
+    /* ── SAVE TOAST ── */
+    .toast {
+      position: fixed;
+      top: 64px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--success);
+      color: #0b0b14;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 700;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+      z-index: 200;
+      white-space: nowrap;
+    }
+    .toast.show { opacity: 1; }
+    /* ── DATE ROW ── */
+    .date-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 14px;
+    }
+    .date-row label { font-size: 13px; color: var(--text-muted); white-space: nowrap; }
+    .date-row input[type="date"] {
+      background: none;
+      border: none;
+      color: var(--text);
+      font-size: 15px;
+      flex: 1;
+      outline: none;
+      min-width: 0;
+      color-scheme: dark;
+    }
+    /* ── SECTION NOTE ── */
+    .section-note {
+      font-size: 12px;
+      color: var(--text-muted);
+      background: var(--surface2);
+      border-left: 2px solid var(--accent);
+      border-radius: 0 8px 8px 0;
+      padding: 8px 12px;
+      margin-bottom: 12px;
+      line-height: 1.4;
+    }
+    /* ── ITEM CARD ── */
+    .item-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 10px;
+      transition: border-color 0.2s;
+    }
+    .item-card.has-value { border-color: rgba(139,124,248,0.35); }
+    .item-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+    .item-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .item-question {
+      font-size: 15px;
+      color: var(--text);
+      margin-bottom: 12px;
+      line-height: 1.4;
+    }
+    .info-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 0;
+      flex-shrink: 0;
+      width: 22px;
+      height: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      transition: color 0.2s, background 0.2s;
+    }
+    .info-btn:hover, .info-btn.active { color: var(--accent); background: rgba(139,124,248,0.1); }
+    .helper-box {
+      font-size: 13px;
+      color: var(--text-muted);
+      background: var(--surface2);
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 12px;
+      line-height: 1.6;
+      display: none;
+    }
+    .helper-box.visible { display: block; }
+    /* ── SCALE (vertical radio) ── */
+    .scale-options { display: flex; flex-direction: column; gap: 5px; }
+    .scale-option {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      user-select: none;
+    }
+    .scale-option:active { opacity: 0.8; }
+    .scale-option.selected {
+      border-color: var(--accent);
+      background: rgba(139,124,248,0.1);
+    }
+    .scale-num {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: var(--surface2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      flex-shrink: 0;
+      color: var(--text-muted);
+      transition: background 0.15s, color 0.15s;
+    }
+    .scale-option.selected .scale-num {
+      background: var(--accent);
+      color: white;
+    }
+    .scale-label { font-size: 14px; color: var(--text); line-height: 1.3; }
+    /* ── NUMBER INPUT ── */
+    .num-wrap { position: relative; }
+    .num-input {
+      width: 100%;
+      padding: 12px 14px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      color: var(--text);
+      font-size: 20px;
+      outline: none;
+      transition: border-color 0.15s;
+      -moz-appearance: textfield;
+    }
+    .num-input::-webkit-outer-spin-button,
+    .num-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+    .num-input:focus { border-color: var(--accent); }
+    .num-unit {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 13px;
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+    /* ── MEDICATION BINARY ── */
+    .med-btns { display: flex; gap: 8px; }
+    .med-btn {
+      flex: 1;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      background: none;
+      color: var(--text-muted);
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .med-btn.sel-no  { border-color: var(--danger);  background: rgba(248,113,113,0.1); color: var(--danger);  }
+    .med-btn.sel-yes { border-color: var(--success); background: rgba(74,222,128,0.1);  color: var(--success); }
+    /* ── EXPORT BUTTON ── */
+    .export-btn {
+      width: 100%;
+      padding: 15px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 6px;
+      letter-spacing: 0.02em;
+      transition: opacity 0.15s;
+    }
+    .export-btn:active { opacity: 0.85; }
+    /* ── HISTORY ── */
+    .history-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+    .history-card:hover { border-color: var(--accent); }
+    .history-date { font-size: 15px; font-weight: 700; color: var(--accent); margin-bottom: 8px; }
+    .history-fields {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+    .history-chip {
+      font-size: 11px;
+      background: var(--surface2);
+      border-radius: 6px;
+      padding: 3px 8px;
+      color: var(--text-muted);
+    }
+    .history-chip b { color: var(--text); }
+    .history-detail { margin-top: 10px; display: none; }
+    .history-detail.open { display: block; }
+    .history-detail table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .history-detail td { padding: 5px 6px; border-bottom: 1px solid var(--border); color: var(--text-muted); }
+    .history-detail td:first-child { color: var(--text); }
+    .history-detail td:last-child { text-align: right; color: var(--text); font-weight: 600; }
+    .empty-state { text-align: center; color: var(--text-muted); padding: 60px 20px; font-size: 15px; }
+    /* ── SETTINGS ── */
+    .settings-section { margin-bottom: 16px; }
+    .settings-heading {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+      padding: 0 2px;
+    }
+    .settings-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    .settings-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .settings-row:last-child { border-bottom: none; }
+    .settings-row-label { font-size: 15px; color: var(--text); }
+    .settings-row-sub  { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .danger-btn {
+      width: 100%;
+      padding: 14px;
+      background: none;
+      border: 1px solid var(--danger);
+      color: var(--danger);
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 4px;
+      transition: background 0.15s;
+    }
+    .danger-btn:active { background: rgba(248,113,113,0.1); }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <span class="header-title">Daily Tracker</span>
+  <span class="header-date" id="headerDate"></span>
+</div>
+
+<div class="toast" id="toast">Saved</div>
+
+<!-- ── LOG VIEW ── -->
+<div class="view active" id="viewLog">
+  <div class="date-row">
+    <label for="datePicker">Date</label>
+    <input type="date" id="datePicker">
+  </div>
+  <div id="itemsContainer"></div>
+  <button class="export-btn" id="exportBtn">⬇ Export CSV</button>
+</div>
+
+<!-- ── HISTORY VIEW ── -->
+<div class="view" id="viewHistory">
+  <div id="historyContainer"></div>
+</div>
+
+<!-- ── SETTINGS VIEW ── -->
+<div class="view" id="viewSettings">
+  <div class="settings-section">
+    <div class="settings-heading">Data</div>
+    <div class="settings-card">
+      <div class="settings-row">
+        <div>
+          <div class="settings-row-label">Total records</div>
+        </div>
+        <span id="recordCount" style="color:var(--accent);font-weight:700">–</span>
+      </div>
+    </div>
+    <button class="danger-btn" id="clearBtn">Clear all data…</button>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-heading">About</div>
+    <div class="settings-card">
+      <div class="settings-row">
+        <div class="settings-row-label">Version</div>
+        <span style="color:var(--text-muted);font-size:13px">1.0.0</span>
+      </div>
+      <div class="settings-row">
+        <div class="settings-row-label">Storage</div>
+        <span style="color:var(--text-muted);font-size:13px">Local only</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── BOTTOM NAV ── -->
+<nav class="nav">
+  <button class="nav-btn active" id="navLog" onclick="switchView('Log')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M8 12h8M8 8h8M8 16h5"/></svg>
+    Log
+  </button>
+  <button class="nav-btn" id="navHistory" onclick="switchView('History')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>
+    History
+  </button>
+  <button class="nav-btn" id="navSettings" onclick="switchView('Settings')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    Settings
+  </button>
+</nav>
+
+<script>
+// ══════════════════════════════════════════════
+// ITEM DEFINITIONS
+// ══════════════════════════════════════════════
+const ITEMS = [
+  {
+    num: 1, id: 'sleep_duration', csvCol: 'sleep_duration',
+    label: 'Sleep Duration',
+    question: 'How many hours did you sleep last night?',
+    helper: 'Use decimal hours (e.g. 7.5 = 7 hrs 30 min). Count from when you fell asleep, not when you got into bed. Stored against yesterday\'s date.',
+    type: 'continuous', step: 0.5, min: 0, max: 24, unit: 'hrs',
+  },
+  {
+    num: 2, id: 'sleep_onset_difficulty', csvCol: 'sleep_onset_difficulty',
+    label: 'Sleep Onset Difficulty',
+    question: 'Once in bed, how difficult was it to fall asleep?',
+    helper: 'Rate how long it took to fall asleep after getting into bed.',
+    type: 'scale', scale: 5,
+    anchors: [
+      'Fell asleep almost immediately',
+      'Slight delay – up to 30 minutes',
+      'Some delay – up to one hour',
+      'Significant delay – up to 2 hours',
+      'Very difficult – more than 2 hours'
+    ],
+  },
+  {
+    num: 3, id: 'sleep_avoidance', csvCol: 'sleep_avoidance',
+    label: 'Sleep Avoidance',
+    question: 'Did you delay going to bed last night despite feeling tired?',
+    helper: 'Covers the decision to go to bed, not what happened once there.',
+    type: 'scale', scale: 5,
+    anchors: [
+      'On time – went to bed when I should have',
+      '1–2 hours late',
+      '3–4 hours late',
+      '5–6 hours late',
+      'Did not go to bed / no sleep'
+    ],
+  },
+  {
+    num: 4, id: 'cognitive_clarity', csvCol: 'cognitive_clarity',
+    label: 'Cognitive Clarity',
+    question: 'How clear and sharp does your thinking feel right now, before medication or coffee?',
+    helper: 'Rate your baseline mental clarity on waking, before any stimulants.',
+    type: 'scale', scale: 5,
+    anchors: [
+      'Severe fog – can barely think',
+      'Very foggy',
+      'A little foggy',
+      'Sleepy but able to focus',
+      'Alert and focused'
+    ],
+  },
+  {
+    num: 5, id: 'morning_anxiety_dread', csvCol: 'morning_anxiety_dread',
+    label: 'Morning Anxiety / Dread',
+    question: 'How much anxiety or dread do you feel about the day ahead?',
+    helper: 'Rate your emotional state on waking, before engaging with the day.',
+    type: 'scale', scale: 5,
+    anchors: [
+      'None – felt calm',
+      'Slight unease',
+      'Background dread',
+      'Significant dread',
+      'Overwhelming dread'
+    ],
+  },
+  {
+    num: 6, id: 'medication_taken', csvCol: 'medication_taken',
+    label: 'Medication Taken',
+    question: 'Did you take your medication today?',
+    helper: 'Log when taken if your timing varies.',
+    type: 'binary',
+  },
+  {
+    num: 7, id: 'caffeine_intake', csvCol: 'caffeine_intake',
+    label: 'Caffeine Intake',
+    question: 'How many caffeine units did you consume today?',
+    helper: '1 unit = espresso shot or cup of tea. Filter coffee or double espresso = 2 units.',
+    type: 'continuous', step: 1, min: 0, max: 20, unit: 'units',
+  },
+  {
+    num: 8, id: 'mood_affect_valence', csvCol: 'mood',
+    label: 'Mood (Affect Valence)',
+    question: 'How would you rate your overall mood today?',
+    helper: 'Rate your general emotional tone across the full day.',
+    type: 'scale', scale: 7, bipolar: true,
+    anchors: [
+      'Very depressed',
+      'Quite depressed',
+      'A little depressed',
+      'Neutral',
+      'A little positive',
+      'Quite positive',
+      'Very positive'
+    ],
+  },
+  {
+    num: 9, id: 'anxiety_day_avg', csvCol: 'anxiety',
+    label: 'Anxiety (Day Average)',
+    question: 'On average, how anxious did you feel today?',
+    helper: 'Rate your average anxiety level across the whole day, not just peak moments.',
+    type: 'scale', scale: 5,
+    anchors: [
+      'None – calm throughout the day',
+      'Mild background anxiety',
+      'Significant background anxiety',
+      'Severe anxiety, interfered with functioning',
+      'Overwhelming – severely interfered with functioning'
+    ],
+  },
+  {
+    num: 10, id: 'emotional_dysregulation', csvCol: 'emotional_dysregulation',
+    label: 'Emotional Dysregulation',
+    question: 'How well did you manage your emotions today? Includes frustration, emotional flooding, sudden mood shifts.',
+    helper: 'Rate how much your emotional responses felt within your control.',
+    type: 'scale', scale: 5,
+    anchors: [
+      'Emotions stable and manageable',
+      'Minor emotional wobbles',
+      'Regulation required significant effort',
+      'Significant volatility',
+      'Overwhelming volatility throughout the day'
+    ],
+  },
+  {
+    num: 11, id: 'executive_function', csvCol: 'executive_function',
+    label: 'Executive Function',
+    question: 'How much difficulty did you have directing thoughts and staying on task?',
+    helper: 'Rate your ability to initiate, plan, and sustain directed thought.',
+    type: 'scale', scale: 5,
+    anchors: [
+      'Total lack of control – could not direct thoughts at all',
+      'Directed thinking only occasionally possible',
+      'On task only with significant effort',
+      'Mostly on task, directed thinking possible with some effort',
+      'Executive almost entirely integrated – only occasional loss of control'
+    ],
+  },
+  {
+    num: 12, id: 'task_flow_ease', csvCol: 'task_flow',
+    label: 'Task Flow / Ease',
+    question: 'How much did tasks feel effortful versus fluid today?',
+    helper: 'Rate how naturally you moved through tasks, from paralysis to full flow state.',
+    type: 'scale', scale: 7, bipolar: true,
+    anchors: [
+      'Complete paralysis – could not engage with tasks',
+      'Very difficult – minimal engagement possible',
+      'Somewhat difficult – required significant push',
+      'Neutral – neither effortful nor fluid',
+      'Somewhat fluid – tasks came fairly naturally',
+      'Quite fluid – mostly in flow',
+      'Complete flow – fully absorbed, effortless'
+    ],
+  },
+  {
+    num: 13, id: 'social_load', csvCol: 'social_load',
+    label: 'Social Load',
+    question: 'How draining was your social interaction today? Rate demand, not just contact time.',
+    helper: 'Consider the quality and intensity of interaction, not just quantity.',
+    type: 'scale', scale: 5,
+    anchors: [
+      'None or minimal – a quiet day alone, even with brief messages',
+      'Normal encounters – brief work interaction, some interpersonal contact',
+      'Minor low-level interactions – chats, coffee, a meeting',
+      'Significant load – after-work drinks, whole team meeting',
+      'Whole-day engagement or intense interaction – conference, interview, party'
+    ],
+  },
+  {
+    num: 14, id: 'routine_disruption', csvCol: 'routine_disruption',
+    label: 'Routine Disruption',
+    question: 'How much did your day deviate from your ideal routine?',
+    helper: 'Rate how well your day matched your intended structure and habits.',
+    type: 'scale', scale: 5,
+    anchors: [
+      'No disruption – day went exactly as planned',
+      'Minor disruption – mostly on track',
+      'Moderate disruption – noticeably off routine',
+      'Significant disruption – routine largely abandoned',
+      'Routine completely derailed'
+    ],
+  },
+  {
+    num: 15, id: 'gi_discomfort', csvCol: 'gi_discomfort',
+    label: 'GI Discomfort',
+    question: 'How much gastrointestinal discomfort did you experience today? Includes bloating, nausea, cramps, constipation, or diarrhoea.',
+    helper: 'Rate the overall burden of GI symptoms across the day.',
+    type: 'scale', scale: 5,
+    anchors: [
+      'None',
+      'Some gas or bloating',
+      'Minor cramps, some gas',
+      'Minor loose bowels, quite gassy',
+      'Severe – extremely gassy, sharp cramps, loose bowels'
+    ],
+  },
+  {
+    num: 16, id: 'eating_properly', csvCol: 'eating_properly',
+    label: 'Eating Properly',
+    question: 'How well did you eat today?',
+    helper: 'Rate the regularity, balance, and quality of your meals.',
+    type: 'scale', scale: 5,
+    anchors: [
+      'Very poorly – skipped most meals or poor choices',
+      'Ate, but mostly poor choices',
+      'Ate, but not when I needed to',
+      'Mostly well – minor gaps',
+      'Very well – regular, balanced meals'
+    ],
+  },
+  {
+    num: 17, id: 'exercise', csvCol: 'exercise',
+    label: 'Exercise',
+    question: 'What was the intensity of your physical activity today?',
+    helper: 'Rate the highest intensity sustained for a meaningful duration.',
+    type: 'scale', scale: 5,
+    anchors: [
+      'None',
+      'Light – gentle walk or stretch',
+      'Moderate – brisk walk or light gym (20–45 min)',
+      'High – vigorous activity (45–90 min)',
+      'Heavy – intense training (90+ min)'
+    ],
+  },
+  {
+    num: 18, id: 'perceived_productivity', csvCol: 'perceived_productivity',
+    label: 'Perceived Productivity',
+    question: 'How productive did you feel today? Rate subjective sense of productivity, not objective output.',
+    helper: 'Rate how productive you felt, regardless of what was actually achieved.',
+    type: 'scale', scale: 5,
+    anchors: [
+      'Total write-off',
+      'Minimal – washed dishes, sent an email',
+      'Several tasks, some progress',
+      'Quite productive',
+      'Extremely productive – exceeded expectations'
+    ],
+  },
+  {
+    num: 19, id: 'hydration', csvCol: 'hydration',
+    label: 'Hydration',
+    question: 'How well hydrated were you today?',
+    helper: 'Rate your overall fluid intake across the day.',
+    type: 'scale', scale: 5,
+    anchors: [
+      'Barely drank anything',
+      '1–2 glasses of water',
+      'Around 1 litre',
+      'Two water bottles / four glasses',
+      'Consistently well hydrated throughout'
+    ],
+  },
+  {
+    num: 20, id: 'fatigue', csvCol: 'fatigue',
+    label: 'Fatigue',
+    question: 'How fatigued did you feel today, beyond just sleepiness?',
+    helper: 'Rate physical and mental fatigue – the sense of depletion or low energy.',
+    type: 'scale', scale: 5,
+    anchors: [
+      'None – felt energised',
+      'Mild fatigue',
+      'Moderate fatigue – noticeably tired',
+      'Significant fatigue – hard to push through',
+      'Severe – barely functional'
+    ],
+  },
+  {
+    num: 21, id: 'meditation_mins', csvCol: 'meditation_mins',
+    label: 'Meditation',
+    question: 'How many minutes did you meditate today?',
+    helper: 'Enter 0 if you did not meditate.',
+    type: 'continuous', step: 1, min: 0, max: 300, unit: 'min',
+  }
+];
+
+// CSV export column order (spec section 6)
+const CSV_COLS = [
+  'date',
+  ...ITEMS.map(i => i.csvCol)
+];
+
+// ══════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════
+let records = {};       // { 'YYYY-MM-DD': { field: value, ... } }
+let currentView = 'Log';
+let expandedHistory = null;
+
+function loadRecords() {
+  try { records = JSON.parse(localStorage.getItem('dt_records') || '{}'); }
+  catch { records = {}; }
+}
+
+function saveRecords() {
+  localStorage.setItem('dt_records', JSON.stringify(records));
+}
+
+function getRecord(date) {
+  if (!records[date]) records[date] = {};
+  return records[date];
+}
+
+function setField(date, fieldId, value) {
+  if (!records[date]) records[date] = {};
+  if (value === null || value === undefined || value === '') {
+    delete records[date][fieldId];
+  } else {
+    records[date][fieldId] = value;
+  }
+  saveRecords();
+}
+
+// ══════════════════════════════════════════════
+// DATE HELPERS
+// ══════════════════════════════════════════════
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function prevDay(dateStr) {
+  const d = new Date(dateStr + 'T12:00:00');
+  d.setDate(d.getDate() - 1);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function formatDateDisplay(dateStr) {
+  const d = new Date(dateStr + 'T12:00:00');
+  return d.toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+// ══════════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════════
+function switchView(name) {
+  currentView = name;
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('view' + name).classList.add('active');
+  document.getElementById('nav' + name).classList.add('active');
+  if (name === 'History') renderHistory();
+  if (name === 'Settings') renderSettings();
+}
+
+// ══════════════════════════════════════════════
+// TOAST
+// ══════════════════════════════════════════════
+let toastTimer;
+function showToast(msg = 'Saved') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 1500);
+}
+
+// ══════════════════════════════════════════════
+// LOG VIEW – RENDER
+// ══════════════════════════════════════════════
+const datePicker = document.getElementById('datePicker');
+const itemsContainer = document.getElementById('itemsContainer');
+
+function getLogDate() { return datePicker.value || todayStr(); }
+
+function renderItems() {
+  const logDate = getLogDate();
+  itemsContainer.innerHTML = '';
+
+  const hasSleep = ITEMS.some(i => i.prevDay);
+  if (hasSleep) {
+    const note = document.createElement('div');
+    note.className = 'section-note';
+    note.innerHTML = `<strong>Sleep items</strong> will be saved to <strong>${formatDateDisplay(prevDay(logDate))}</strong>`;
+    itemsContainer.appendChild(note);
+  }
+
+  ITEMS.forEach(item => {
+    const storeDate = item.prevDay ? prevDay(logDate) : logDate;
+    const rec = getRecord(storeDate);
+    const val = rec[item.id];
+    const hasVal = val !== undefined && val !== null && val !== '';
+
+    const card = document.createElement('div');
+    card.className = 'item-card' + (hasVal ? ' has-value' : '');
+
+    // Header
+    const hdr = document.createElement('div');
+    hdr.className = 'item-header';
+
+    const labelEl = document.createElement('div');
+    labelEl.className = 'item-label';
+    labelEl.textContent = item.label;
+
+    const infoBtn = document.createElement('button');
+    infoBtn.className = 'info-btn';
+    infoBtn.title = 'Show help';
+    infoBtn.innerHTML = `<svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10" cy="10" r="8"/><line x1="10" y1="9" x2="10" y2="14"/><circle cx="10" cy="6.5" r="0.5" fill="currentColor" stroke="none"/></svg>`;
+
+    hdr.appendChild(labelEl);
+    hdr.appendChild(infoBtn);
+    card.appendChild(hdr);
+
+    // Question
+    const q = document.createElement('div');
+    q.className = 'item-question';
+    q.textContent = item.question;
+    card.appendChild(q);
+
+    // Helper box
+    const helper = document.createElement('div');
+    helper.className = 'helper-box';
+    helper.textContent = item.helper;
+    card.appendChild(helper);
+
+    infoBtn.addEventListener('click', () => {
+      helper.classList.toggle('visible');
+      infoBtn.classList.toggle('active');
+    });
+
+    // Input
+    if (item.type === 'scale') {
+      const opts = document.createElement('div');
+      opts.className = 'scale-options';
+      for (let v = 1; v <= item.scale; v++) {
+        const opt = document.createElement('div');
+        opt.className = 'scale-option' + (val === v ? ' selected' : '');
+        opt.innerHTML = `<div class="scale-num">${v}</div><div class="scale-label">${item.anchors[v-1]}</div>`;
+        opt.addEventListener('click', () => {
+          opts.querySelectorAll('.scale-option').forEach(o => o.classList.remove('selected'));
+          opt.classList.add('selected');
+          card.classList.add('has-value');
+          setField(storeDate, item.id, v);
+          showToast();
+        });
+        opts.appendChild(opt);
+      }
+      card.appendChild(opts);
+
+    } else if (item.type === 'continuous') {
+      const wrap = document.createElement('div');
+      wrap.className = 'num-wrap';
+      const inp = document.createElement('input');
+      inp.type = 'number';
+      inp.className = 'num-input';
+      inp.min = item.min;
+      inp.max = item.max;
+      inp.step = item.step;
+      inp.placeholder = '–';
+      inp.inputMode = item.step < 1 ? 'decimal' : 'numeric';
+      if (hasVal) inp.value = val;
+      const unitEl = document.createElement('span');
+      unitEl.className = 'num-unit';
+      unitEl.textContent = item.unit;
+      inp.addEventListener('change', () => {
+        const v = inp.value === '' ? null : parseFloat(inp.value);
+        setField(storeDate, item.id, v);
+        card.classList.toggle('has-value', v !== null);
+        showToast();
+      });
+      wrap.appendChild(inp);
+      wrap.appendChild(unitEl);
+      card.appendChild(wrap);
+
+    } else if (item.type === 'binary') {
+      const btns = document.createElement('div');
+      btns.className = 'med-btns';
+      const noBtn = document.createElement('button');
+      noBtn.className = 'med-btn' + (val === 0 ? ' sel-no' : '');
+      noBtn.textContent = '✗  No';
+      const yesBtn = document.createElement('button');
+      yesBtn.className = 'med-btn' + (val === 1 ? ' sel-yes' : '');
+      yesBtn.textContent = '✓  Yes';
+      noBtn.addEventListener('click', () => {
+        noBtn.className = 'med-btn sel-no';
+        yesBtn.className = 'med-btn';
+        card.classList.add('has-value');
+        setField(storeDate, item.id, 0);
+        showToast();
+      });
+      yesBtn.addEventListener('click', () => {
+        yesBtn.className = 'med-btn sel-yes';
+        noBtn.className = 'med-btn';
+        card.classList.add('has-value');
+        setField(storeDate, item.id, 1);
+        showToast();
+      });
+      btns.appendChild(noBtn);
+      btns.appendChild(yesBtn);
+      card.appendChild(btns);
+    }
+
+    itemsContainer.appendChild(card);
+  });
+}
+
+// ══════════════════════════════════════════════
+// CSV EXPORT
+// ══════════════════════════════════════════════
+document.getElementById('exportBtn').addEventListener('click', exportCSV);
+
+function exportCSV() {
+  // Collect all dates that have any data
+  const allDates = Object.keys(records).sort();
+  if (allDates.length === 0) { alert('No data to export.'); return; }
+
+  const headers = CSV_COLS;
+  const rows = [headers.join(',')];
+
+  allDates.forEach(date => {
+    const rec = records[date] || {};
+    const row = headers.map(col => {
+      if (col === 'date') return date;
+      const item = ITEMS.find(i => i.csvCol === col);
+      if (!item) return '';
+      const val = rec[item.id];
+      if (val === undefined || val === null || val === '') return '';
+      return val;
+    });
+    rows.push(row.join(','));
+  });
+
+  const csv = rows.join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `daily_tracker_${todayStr()}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Exported!');
+}
+
+// ══════════════════════════════════════════════
+// HISTORY VIEW
+// ══════════════════════════════════════════════
+function renderHistory() {
+  const container = document.getElementById('historyContainer');
+  const allDates = Object.keys(records).sort().reverse();
+  container.innerHTML = '';
+
+  if (allDates.length === 0) {
+    container.innerHTML = '<div class="empty-state">No entries yet.<br>Start logging to see your history.</div>';
+    return;
+  }
+
+  allDates.forEach(date => {
+    const rec = records[date];
+    const filled = ITEMS.filter(i => rec[i.id] !== undefined && rec[i.id] !== null && rec[i.id] !== '');
+    if (filled.length === 0) return;
+
+    const card = document.createElement('div');
+    card.className = 'history-card';
+
+    const dateEl = document.createElement('div');
+    dateEl.className = 'history-date';
+    dateEl.textContent = formatDateDisplay(date);
+
+    const chips = document.createElement('div');
+    chips.className = 'history-fields';
+    filled.forEach(item => {
+      const chip = document.createElement('div');
+      chip.className = 'history-chip';
+      chip.innerHTML = `${item.label.replace(/ \(.*\)/, '')}: <b>${rec[item.id]}</b>`;
+      chips.appendChild(chip);
+    });
+
+    const detail = document.createElement('div');
+    detail.className = 'history-detail';
+    const table = document.createElement('table');
+    ITEMS.forEach(item => {
+      const v = rec[item.id];
+      if (v === undefined || v === null || v === '') return;
+      const tr = document.createElement('tr');
+      const label = item.type === 'scale' && item.anchors
+        ? `${v} – ${item.anchors[v-1]}`
+        : item.type === 'binary'
+          ? (v === 1 ? 'Yes' : 'No')
+          : `${v} ${item.unit || ''}`;
+      tr.innerHTML = `<td>${item.label}</td><td>${label}</td>`;
+      table.appendChild(tr);
+    });
+    detail.appendChild(table);
+
+    card.appendChild(dateEl);
+    card.appendChild(chips);
+    card.appendChild(detail);
+
+    card.addEventListener('click', () => {
+      const isOpen = detail.classList.contains('open');
+      document.querySelectorAll('.history-detail.open').forEach(d => d.classList.remove('open'));
+      if (!isOpen) detail.classList.add('open');
+    });
+
+    container.appendChild(card);
+  });
+}
+
+// ══════════════════════════════════════════════
+// SETTINGS VIEW
+// ══════════════════════════════════════════════
+function renderSettings() {
+  document.getElementById('recordCount').textContent = Object.keys(records).length;
+}
+
+document.getElementById('clearBtn').addEventListener('click', () => {
+  if (confirm('Delete ALL tracking data? This cannot be undone.')) {
+    records = {};
+    saveRecords();
+    renderItems();
+    renderSettings();
+    showToast('Data cleared');
+  }
+});
+
+// ══════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════
+function init() {
+  loadRecords();
+
+  const today = todayStr();
+  datePicker.value = today;
+  datePicker.max = today;
+  document.getElementById('headerDate').textContent = new Date().toLocaleDateString('en-GB', { weekday: 'short', month: 'short', day: 'numeric' });
+
+  datePicker.addEventListener('change', renderItems);
+
+  renderItems();
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').catch(e => console.warn('SW registration failed:', e));
+  }
+}
+
+init();
+</script>
+</body>
+</html>
